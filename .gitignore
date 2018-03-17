@@ -1,0 +1,7 @@
+.*.swp
+perf.data
+perf.data.old
+test
+test_cov
+*.html
+*.gcno
