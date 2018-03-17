@@ -11,49 +11,60 @@
 #include <utility>
 #include <cstddef>
 
+template<
+  typename Key,
+  typename T>
 class Tree {
+ private:
+  struct Node;
+  struct Entry;
+
+  typedef std::shared_ptr<const Node> node_ptr_type;
+  typedef std::shared_ptr<const Entry> entry_ptr_type;
+
+  typedef Key key_type;
+  typedef T   mapped_type;
+
   struct Entry {
-    Entry(const std::string& key, const std::string& value) :
+    Entry(const key_type& key, const mapped_type& value) :
       key(key),
       value(value)
     {}
 
-    const std::string key;
-    const std::string value;
+    const key_type key;
+    const mapped_type value;
   };
 
   struct Node : std::enable_shared_from_this<const Node> {
    public:
-    // Build a node
-    Node(const bool red, const std::shared_ptr<const Entry>& entry,
-        const std::shared_ptr<const Node>& left,
-        const std::shared_ptr<const Node>& right) :
+    Node(const bool red,
+        const entry_ptr_type& entry,
+        const node_ptr_type& left,
+        const node_ptr_type& right) :
       red(red),
       entry(entry),
       left(left),
       right(right)
     {}
 
-    // Build a node with no children
-    Node(const bool red, const std::string& key, const std::string& value) :
+    Node(const bool red, const key_type& key, const mapped_type& value) :
       red(red),
       entry(std::make_shared<const Entry>(key, value))
     {}
 
-    // Build copies of this node
    public:
-    inline auto copyWithEntry(const std::string& key,
-        const std::string& value) const {
+    inline auto copyWithEntry(const key_type& key,
+        const mapped_type& value) const {
       const auto new_entry = std::make_shared<const Entry>(key, value);
       return std::make_shared<const Node>(red, new_entry, left, right);
     }
 
-    inline auto copyWithLeft(const std::shared_ptr<const Node> left) const {
-      return std::make_shared<const Node>(red, entry, std::move(left), right);
+    inline auto copyWithLeft(const node_ptr_type& left) const {
+      return std::make_shared<const Node>(red, entry, left, right);
     }
 
-    inline auto copyWithRight(const std::shared_ptr<const Node> right) const {
-      return std::make_shared<const Node>(red, entry, left, std::move(right));
+    inline auto copyWithRight(const node_ptr_type& right) const {
+      return std::make_shared<const Node>(red, entry, left, right);
     }
 
     inline auto copyAsBlack() const {
@@ -65,9 +76,8 @@ class Tree {
     }
 
    public:
-    static std::pair<std::shared_ptr<const Node>, bool> insert(
-        const std::shared_ptr<const Node>& node, const std::string& key,
-        const std::string& value) {
+    static std::pair<node_ptr_type, bool> insert(const node_ptr_type& node,
+        const key_type& key, const mapped_type& value) {
       if (node) {
         const auto cmp = key.compare(node->entry->key);
         if (cmp < 0) {
@@ -98,7 +108,7 @@ class Tree {
       }
     }
 
-    std::shared_ptr<const Node> balance() const {
+    node_ptr_type balance() const {
       if (!red) {
         // match: (color_l, color_l_l, color_l_r, color_r, color_r_l, color_r_r)
         if (left && left->red) {
@@ -189,12 +199,11 @@ class Tree {
       }
 
       // red, or no matching case above
-      return shared_from_this();
+      return this->shared_from_this();
     }
 
     // http://www.eternallyconfuzzled.com/tuts/datastructures/jsw_tut_rbtree.aspx
-    static std::size_t checkConsistency(
-        const std::shared_ptr<const Node>& node) {
+    static std::size_t checkConsistency(const node_ptr_type& node) {
       if (!node) {
         return 1;
       }
@@ -227,9 +236,8 @@ class Tree {
 
     // remove
    public:
-    static std::shared_ptr<const Node> fuse(
-        const std::shared_ptr<const Node>& left,
-        const std::shared_ptr<const Node>& right) {
+    static node_ptr_type fuse(const node_ptr_type& left,
+        const node_ptr_type& right) {
       // match: (left, right)
       // case: (None, r)
       if (!left) {
@@ -335,8 +343,7 @@ class Tree {
       assert(0); // LCOV_EXCL_LINE
     }
 
-    static std::shared_ptr<const Node> balance(
-        const std::shared_ptr<const Node>& node) {
+    static node_ptr_type balance(const node_ptr_type& node) {
       if (node->left && node->left->red &&
           node->right && node->right->red) {
 
@@ -357,8 +364,7 @@ class Tree {
       return node->balance();
     }
 
-    static std::shared_ptr<const Node> balance_left(
-        const std::shared_ptr<const Node>& node) {
+    static node_ptr_type balance_left(const node_ptr_type& node) {
       // match: (color_l, color_r, color_r_l)
       // case: (Some(R), ..)
       if (node->left && node->left->red) {
@@ -418,8 +424,7 @@ class Tree {
       assert(0); // LCOV_EXCL_LINE
     }
 
-    static std::shared_ptr<const Node> balance_right(
-        const std::shared_ptr<const Node>& node) {
+    static node_ptr_type balance_right(const node_ptr_type& node) {
       // match: (color_l, color_l_r, color_r)
       // case: (.., Some(R))
       if (node->right && node->right->red) {
@@ -479,8 +484,8 @@ class Tree {
       assert(0); // LCOV_EXCL_LINE
     }
 
-    static std::pair<std::shared_ptr<const Node>, bool> remove_left(
-        const std::shared_ptr<const Node>& node, const std::string& key) {
+    static std::pair<node_ptr_type, bool> remove_left(
+        const node_ptr_type& node, const key_type& key) {
       const auto [new_left, removed] = remove(node->left, key);
 
       const auto new_node = std::make_shared<const Node>(
@@ -496,8 +501,8 @@ class Tree {
       return std::pair(balanced_new_node, removed);
     }
 
-    static std::pair<std::shared_ptr<const Node>, bool> remove_right(
-        const std::shared_ptr<const Node>& node, const std::string& key) {
+    static std::pair<node_ptr_type, bool> remove_right(
+        const node_ptr_type& node, const key_type& key) {
       const auto [new_right, removed] = remove(node->right, key);
 
       const auto new_node = std::make_shared<const Node>(
@@ -513,9 +518,8 @@ class Tree {
       return std::pair(bal_new_node, removed);
     }
 
-    static std::pair<std::shared_ptr<const Node>, bool> remove(
-        const std::shared_ptr<const Node>& node,
-        const std::string& key) {
+    static std::pair<node_ptr_type, bool> remove(
+        const node_ptr_type& node, const key_type& key) {
       if (node) {
         const auto cmp = key.compare(node->entry->key);
         if (cmp < 0) {
@@ -533,9 +537,9 @@ class Tree {
 
    public:
     const bool red;
-    const std::shared_ptr<const Entry> entry;
-    const std::shared_ptr<const Node> left;
-    const std::shared_ptr<const Node> right;
+    const entry_ptr_type entry;
+    const node_ptr_type left;
+    const node_ptr_type right;
   };
 
  public:
@@ -544,20 +548,20 @@ class Tree {
     size_(0)
   {}
 
-  Tree(std::shared_ptr<const Node> root, std::size_t size) :
+ private:
+  Tree(node_ptr_type root, std::size_t size) :
     root_(root), size_(size)
   {}
 
  public:
-  Tree insert(const std::string& key, const std::string& value) const {
+  Tree insert(const key_type& key, const mapped_type& value) const {
     const auto [mb_new_root, is_new_key] = Node::insert(root_, key, value);
     const auto new_root = mb_new_root->copyAsBlack(); // mb = maybe black
-
     const auto new_size = size_ + (is_new_key ? 1 : 0);
     return Tree(new_root, new_size);
   }
 
-  Tree remove(const std::string& key) const {
+  Tree remove(const key_type& key) const {
     const auto [mb_new_root, removed] = Node::remove(root_, key);
     if (removed) {
       const auto new_root = mb_new_root ?
@@ -568,11 +572,10 @@ class Tree {
     }
   }
 
-  std::map<std::string, std::string> items() const {
-    std::map<std::string, std::string> out;
-
+  std::map<key_type, mapped_type> items() const {
+    std::map<key_type, mapped_type> out;
     auto node = root_;
-    auto s = std::stack<std::shared_ptr<const Node>>();
+    auto s = std::stack<node_ptr_type>();
     while (!s.empty() || node) {
       if (node) {
         s.push(node);
@@ -600,6 +603,6 @@ class Tree {
   }
 
  private:
-  std::shared_ptr<const Node> root_;
+  node_ptr_type root_;
   std::size_t size_;
 };

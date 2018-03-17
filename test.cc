@@ -7,7 +7,7 @@
 #include <random>
 
 struct tree_pair {
-  Tree tree;
+  Tree<std::string, std::string> tree;
   std::map<std::string, std::string> truth;
 };
 
@@ -29,7 +29,7 @@ static void verify_history(uint32_t coin_toss)
   std::list<tree_pair> trees;
 
   // on-going state
-  Tree tree;
+  Tree<std::string, std::string> tree;
   std::map<std::string, std::string> truth;
 
   // build a bunch of snapshots
