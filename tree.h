@@ -79,8 +79,7 @@ class Tree {
     static std::pair<node_ptr_type, bool> insert(const node_ptr_type& node,
         const key_type& key, const mapped_type& value) {
       if (node) {
-        const auto cmp = key.compare(node->entry->key);
-        if (cmp < 0) {
+        if (key < node->entry->key) {
           const auto [new_left, is_new_key] = insert(node->left, key, value);
           const auto new_node = node->copyWithLeft(new_left);
           if (is_new_key) {
@@ -89,11 +88,7 @@ class Tree {
             return std::pair(new_node, is_new_key);
           }
 
-        } else if (cmp == 0) {
-          const auto new_node = node->copyWithEntry(key, value);
-          return std::pair(new_node, false);
-
-        } else {
+        } else if (key > node->entry->key) {
           const auto [new_right, is_new_key] = insert(node->right, key, value);
           const auto new_node = node->copyWithRight(new_right);
           if (is_new_key) {
@@ -101,6 +96,10 @@ class Tree {
           } else {
             return std::pair(new_node, is_new_key);
           }
+
+        } else {
+          const auto new_node = node->copyWithEntry(key, value);
+          return std::pair(new_node, false);
         }
       } else {
         const auto new_node = std::make_shared<const Node>(true, key, value);
@@ -215,8 +214,8 @@ class Tree {
         return 0; // LCOV_EXCL_LINE
       }
 
-      if ((left && left->entry->key.compare(node->entry->key) >= 0) ||
-          (right && right->entry->key.compare(node->entry->key) <= 0)) {
+      if ((left && left->entry->key >= node->entry->key) ||
+          (right && right->entry->key <= node->entry->key)) {
         return 0; // LCOV_EXCL_LINE
       }
 
@@ -521,14 +520,13 @@ class Tree {
     static std::pair<node_ptr_type, bool> remove(
         const node_ptr_type& node, const key_type& key) {
       if (node) {
-        const auto cmp = key.compare(node->entry->key);
-        if (cmp < 0) {
+        if (key < node->entry->key) {
           return remove_left(node, key);
-        } else if (cmp == 0) {
+        } else if (key > node->entry->key) {
+          return remove_right(node, key);
+        } else {
           const auto new_node = fuse(node->left, node->right);
           return std::pair(new_node, true);
-        } else {
-          return remove_right(node, key);
         }
       } else {
         return std::pair(nullptr, false);
