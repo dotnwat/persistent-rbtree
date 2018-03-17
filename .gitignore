@@ -1,7 +1,12 @@
 .*.swp
 perf.data
 perf.data.old
-test
-test_cov
+full_test
+bench
 *.html
 *.gcno
+CMakeCache.txt
+CMakeFiles/
+cmake_install.cmake
+Makefile
+build
