@@ -83,27 +83,27 @@ class Tree {
           const auto [new_left, is_new_key] = insert(node->left, key, value);
           const auto new_node = node->copyWithLeft(new_left);
           if (is_new_key) {
-            return std::pair(new_node->balance(), is_new_key);
+            return std::make_pair(new_node->balance(), is_new_key);
           } else {
-            return std::pair(new_node, is_new_key);
+            return std::make_pair(new_node, is_new_key);
           }
 
         } else if (key > node->entry->key) {
           const auto [new_right, is_new_key] = insert(node->right, key, value);
           const auto new_node = node->copyWithRight(new_right);
           if (is_new_key) {
-            return std::pair(new_node->balance(), is_new_key);
+            return std::make_pair(new_node->balance(), is_new_key);
           } else {
-            return std::pair(new_node, is_new_key);
+            return std::make_pair(new_node, is_new_key);
           }
 
         } else {
           const auto new_node = node->copyWithEntry(key, value);
-          return std::pair(new_node, false);
+          return std::make_pair(new_node, false);
         }
       } else {
         const auto new_node = std::make_shared<const Node>(true, key, value);
-        return std::pair(new_node, true);
+        return std::make_pair(new_node, true);
       }
     }
 
@@ -497,7 +497,7 @@ class Tree {
       const auto balanced_new_node = left_black ?
         balance_left(new_node) : new_node;
 
-      return std::pair(balanced_new_node, removed);
+      return std::make_pair(balanced_new_node, removed);
     }
 
     static std::pair<node_ptr_type, bool> remove_right(
@@ -514,7 +514,7 @@ class Tree {
       const auto bal_new_node = right_black ?
         balance_right(new_node) : new_node;
 
-      return std::pair(bal_new_node, removed);
+      return std::make_pair(bal_new_node, removed);
     }
 
     static std::pair<node_ptr_type, bool> remove(
@@ -526,10 +526,10 @@ class Tree {
           return remove_right(node, key);
         } else {
           const auto new_node = fuse(node->left, node->right);
-          return std::pair(new_node, true);
+          return std::make_pair(new_node, true);
         }
       } else {
-        return std::pair(nullptr, false);
+        return std::make_pair(nullptr, false);
       }
     }
 
