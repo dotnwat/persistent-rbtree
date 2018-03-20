@@ -10,7 +10,7 @@
 #include <string>
 #include <utility>
 #include <cstddef>
-#include <experimental/optional>
+#include <boost/optional.hpp>
 
 template<
   typename Key,
@@ -572,7 +572,7 @@ class Tree {
     }
   }
 
-  std::experimental::optional<value_type> get(const key_type& key) const {
+  boost::optional<value_type> get(const key_type& key) const {
     auto cur = root_;
     while (cur) {
       if (key < cur->entry->key) {
@@ -583,7 +583,7 @@ class Tree {
         return std::make_pair(cur->entry->key, cur->entry->value);
       }
     }
-    return std::experimental::nullopt;
+    return boost::none;
   }
 
   std::map<key_type, mapped_type> items() const {
