@@ -10,6 +10,7 @@
 #include <string>
 #include <utility>
 #include <cstddef>
+#include <experimental/optional>
 
 template<
   typename Key,
@@ -24,6 +25,7 @@ class Tree {
 
   typedef Key key_type;
   typedef T   mapped_type;
+  typedef std::pair<Key, T> value_type;
 
   struct Entry {
     Entry(const key_type& key, const mapped_type& value) :
@@ -568,6 +570,20 @@ class Tree {
     } else {
       return *this;
     }
+  }
+
+  std::experimental::optional<value_type> get(const key_type& key) const {
+    auto cur = root_;
+    while (cur) {
+      if (key < cur->entry->key) {
+        cur = cur->left;
+      } else if (key > cur->entry->key) {
+        cur = cur->right;
+      } else {
+        return std::make_pair(cur->entry->key, cur->entry->value);
+      }
+    }
+    return std::experimental::nullopt;
   }
 
   std::map<key_type, mapped_type> items() const {
