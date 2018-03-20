@@ -1,10 +1,10 @@
-#include <benchmark/benchmark.h>
-#include <iostream>
-#include <random>
+#include <condition_variable>
 #include <iomanip>
+#include <iostream>
 #include <limits>
 #include <mutex>
-#include <condition_variable>
+#include <random>
+#include <benchmark/benchmark.h>
 #include "tree.h"
 
 struct rng {
@@ -38,15 +38,28 @@ static auto buildTree(rng& r, std::size_t size)
 class InsertFixture : public ::benchmark::Fixture {
  public:
   void SetUp(const ::benchmark::State& state) {
+    // thread 0 builds the tree
     if (state.thread_index == 0) {
-      const int tree_size = state.range(0);
+      std::lock_guard<std::mutex> lk(lock);
+
+      tree_size = state.range(0);
+      num_inserts = state.range(1);
+
       tree = buildTree(r, tree_size);
 
-      std::lock_guard<std::mutex> lk(lock);
+      // notify other threads
       init_complete = true;
       cond.notify_all();
     }
+
+    // all threads wait until the tree is built
+    std::unique_lock<std::mutex> lk(lock);
+    cond.wait(lk, [&] { return init_complete; });
+    lk.unlock();
   }
+
+  int tree_size;
+  int num_inserts;
 
   rng r;
   Tree<uint64_t, uint64_t> tree;
@@ -56,20 +69,12 @@ class InsertFixture : public ::benchmark::Fixture {
   std::mutex lock;
 };
 
-BENCHMARK_DEFINE_F(InsertFixture, Test)(benchmark::State& state)
+BENCHMARK_DEFINE_F(InsertFixture, UniformInt)(benchmark::State& state)
 {
-  // wait for the tree to be built
-  {
-    std::unique_lock<std::mutex> lk(lock);
-    cond.wait(lk, [&] { return init_complete; });
-    lk.unlock();
-
-    const int tree_size = state.range(0);
-    assert(tree.size() == tree_size);
-  }
+  assert(tree_size > 0);
+  assert(tree.size() == tree_size);
 
   // generate set of keys to insert
-  const int num_inserts = state.range(1);
   std::vector<uint64_t> keys;
   keys.reserve(num_inserts);
   while (keys.size() < num_inserts) {
@@ -88,9 +93,10 @@ BENCHMARK_DEFINE_F(InsertFixture, Test)(benchmark::State& state)
   state.SetItemsProcessed(state.iterations() * keys.size());
 }
 
-BENCHMARK_REGISTER_F(InsertFixture, Test)
-  ->RangeMultiplier(2)
-  ->Ranges({{1, 128}, {512, 512}});
-  //->ThreadRange(1, 2);
+BENCHMARK_REGISTER_F(InsertFixture, UniformInt)
+  ->RangeMultiplier(10)
+  ->Ranges({{1, 1000}, {10000, 10000}})
+  ->ThreadRange(1, 2)
+  ->UseRealTime();
 
 BENCHMARK_MAIN();
