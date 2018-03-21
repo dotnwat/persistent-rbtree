@@ -51,7 +51,10 @@ static void BM_Insert(benchmark::State& state)
     std::lock_guard<std::mutex> lk(lock);
 
     // build the shared tree
-    tree = buildTree(r, tree_size);
+    if (tree.size() != tree_size) {
+      tree.clear();
+      tree = buildTree(r, tree_size);
+    }
 
     // notify build is complete
     init_complete = true;
@@ -85,7 +88,9 @@ static void BM_Insert(benchmark::State& state)
   state.SetItemsProcessed(state.iterations() * keys.size());
 
   if (state.thread_index == 0) {
-    tree.clear();
+    // tree is cleared when the size changes in the initialization phase. Note
+    // that if there are more benchmarks in this executable, we might want to
+    // figure out a way to clear the tree after the very last run.
   }
 }
 
