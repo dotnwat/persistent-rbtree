@@ -35,42 +35,34 @@ static auto buildTree(rng& r, std::size_t size)
   return tree;
 }
 
-class InsertFixture : public ::benchmark::Fixture {
- public:
-  void SetUp(const ::benchmark::State& state) {
-    // thread 0 builds the tree
-    if (state.thread_index == 0) {
-      std::lock_guard<std::mutex> lk(lock);
+static Tree<uint64_t, uint64_t> tree;
 
-      tree_size = state.range(0);
-      num_inserts = state.range(1);
+static std::condition_variable cond;
+static bool init_complete = false;
+static std::mutex lock;
 
-      tree = buildTree(r, tree_size);
+static void BM_Insert(benchmark::State& state)
+{
+  const int tree_size = state.range(0);
+  const int num_inserts = state.range(1);
+  rng r;
 
-      // notify other threads
-      init_complete = true;
-      cond.notify_all();
-    }
+  if (state.thread_index == 0) {
+    std::lock_guard<std::mutex> lk(lock);
 
-    // all threads wait until the tree is built
-    std::unique_lock<std::mutex> lk(lock);
-    cond.wait(lk, [&] { return init_complete; });
-    lk.unlock();
+    // build the shared tree
+    tree = buildTree(r, tree_size);
+
+    // notify build is complete
+    init_complete = true;
+    cond.notify_all();
   }
 
-  int tree_size;
-  int num_inserts;
+  // all threads wait until the tree is built
+  std::unique_lock<std::mutex> lk(lock);
+  cond.wait(lk, [&] { return init_complete; });
+  lk.unlock();
 
-  rng r;
-  Tree<uint64_t, uint64_t> tree;
-
-  std::condition_variable cond;
-  bool init_complete = false;
-  std::mutex lock;
-};
-
-BENCHMARK_DEFINE_F(InsertFixture, UniformInt)(benchmark::State& state)
-{
   assert(tree_size > 0);
   assert(tree.size() == tree_size);
 
@@ -91,12 +83,16 @@ BENCHMARK_DEFINE_F(InsertFixture, UniformInt)(benchmark::State& state)
   }
 
   state.SetItemsProcessed(state.iterations() * keys.size());
+
+  if (state.thread_index == 0) {
+    tree.clear();
+  }
 }
 
-BENCHMARK_REGISTER_F(InsertFixture, UniformInt)
+BENCHMARK(BM_Insert)
   ->RangeMultiplier(10)
   ->Ranges({{1, 1000}, {10000, 10000}})
-  ->ThreadRange(1, 2)
+  ->ThreadRange(1, 4)
   ->UseRealTime();
 
 BENCHMARK_MAIN();
