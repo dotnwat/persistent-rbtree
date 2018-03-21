@@ -1,4 +1,4 @@
-# immutable, persistent red-black tree
+# Immutable, persistent red-black tree
 
 ```c++
 Tree<int, int> t;            // t is empty
