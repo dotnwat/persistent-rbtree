@@ -616,6 +616,10 @@ class Tree {
     }
   }
 
+  void clear() {
+    root_.reset();
+  }
+
  private:
   node_ptr_type root_;
   std::size_t size_;
